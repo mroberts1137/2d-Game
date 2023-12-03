@@ -5,13 +5,17 @@ export class Player {
     this.spriteWidth = 575;
     this.spriteHeight = 523;
     this.spriteScale = 2;
-    this.width = this.spriteWidth / this.spriteScale;
-    this.height = this.spriteHeight / this.spriteScale;
     this.playerState = 'idle';
     this.gameFrame = 0;
+    this.collisionId = 0;
 
-    this.x = x;
-    this.y = y;
+    // coordinates/hitbox
+    this.rect = {
+      x: x,
+      y: y,
+      width: this.spriteWidth / this.spriteScale,
+      height: this.spriteHeight / this.spriteScale
+    };
 
     this.spriteAnimations = [];
     const animationStates = [
@@ -80,16 +84,32 @@ export class Player {
     let frameX = this.spriteAnimations[this.playerState].loc[animationFrame].x;
     let frameY = this.spriteAnimations[this.playerState].loc[animationFrame].y;
 
+    if (window.debug.DRAW_HITBOX) {
+      switch (this.collisionId) {
+        case 0:
+          window.global.ctx.fillStyle = 'white';
+          break;
+        case 1:
+          window.global.ctx.fillStyle = 'red';
+          break;
+      }
+      window.global.ctx.fillRect(
+        this.rect.x,
+        this.rect.y,
+        this.rect.width,
+        this.rect.height
+      );
+    }
     window.global.ctx.drawImage(
       this.playerImage,
       frameX,
       frameY,
       this.spriteWidth,
       this.spriteHeight,
-      this.x,
-      this.y,
-      this.width,
-      this.height
+      this.rect.x,
+      this.rect.y,
+      this.rect.width,
+      this.rect.height
     );
   }
 }

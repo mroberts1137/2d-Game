@@ -2,20 +2,30 @@
 
 import { Enemy, Bat, Bat2, Ghost, Wheel } from './enemy.js';
 import { Player } from './player.js';
+import Layer from './background.js';
 
 const canvas = document.getElementById('canvas1');
 const ctx = canvas.getContext('2d');
 
 const CANVAS_WIDTH = (canvas.width = 800);
 const CANVAS_HEIGHT = (canvas.height = 600);
-const TICK_SPEED = 5;
-let gameFrame = 0;
+
+const pauseButton = document.querySelector('#pauseButton');
+pauseButton.addEventListener('click', pauseGame);
+
+/////////////////////////////////////////////////////////////////
+// GLOBAL PROPERTIES
+/////////////////////////////////////////////////////////////////
 
 window.global = {
-  TICK_SPEED: TICK_SPEED,
+  TICK_SPEED: 5,
   CANVAS_WIDTH: CANVAS_WIDTH,
   CANVAS_HEIGHT: CANVAS_HEIGHT,
   ctx: ctx
+};
+
+window.debug = {
+  DRAW_HITBOX: true
 };
 
 const backgroundLayer1 = new Image();
@@ -29,37 +39,42 @@ backgroundLayer4.src = 'assets/backgrounds/layer-4.png';
 const backgroundLayer5 = new Image();
 backgroundLayer5.src = 'assets/backgrounds/layer-5.png';
 
-class Layer {
-  constructor(image, speedModifier) {
-    this.image = image;
-    this.speedModifier = speedModifier;
-    this.x = 0;
-    this.y = 0;
-    this.width = 2400;
-    this.height = 700;
-    this.speed = TICK_SPEED * this.speedModifier;
+/////////////////////////////////////////////////////////////////
+// MAIN GAME FUNCTIONS
+/////////////////////////////////////////////////////////////////
+function checkCollision(rect1, rect2) {
+  if (
+    rect1.x > rect2.x + rect2.width ||
+    rect1.x + rect1.width < rect2.x ||
+    rect1.y > rect2.y + rect2.height ||
+    rect1.y + rect1.height < rect2.y
+  ) {
+    // no collision
+    return false;
+  } else {
+    // collision
+    return true;
   }
+}
 
-  update() {
-    this.speed = TICK_SPEED * this.speedModifier;
-    if (this.x <= -this.width) this.x = 0;
-    this.x = Math.floor(this.x - this.speed);
-  }
-  draw() {
-    ctx.drawImage(this.image, this.x, this.y, this.width, this.height);
-    ctx.drawImage(
-      this.image,
-      this.x + this.width,
-      this.y,
-      this.width,
-      this.height
-    );
+function pauseGame() {
+  if (!gamePaused) {
+    gamePaused = true;
+    pauseButton.innerText = 'Play';
+  } else {
+    gamePaused = false;
+    pauseButton.innerText = 'Pause';
   }
 }
 
 /////////////////////////////////////////////////////////////////
 // GAME INITIALIZE
 /////////////////////////////////////////////////////////////////
+
+let gameFrame = 0;
+let gamePaused = false;
+
+// wait until all assets are fully loaded before starting the game
 window.addEventListener('load', () => {
   const player = new Player(150, 250);
   player.playerState = 'run';
@@ -75,17 +90,29 @@ window.addEventListener('load', () => {
   const layer5 = new Layer(backgroundLayer5, 1);
 
   const objects = [];
-  objects.push(layer1, layer2, layer3, layer4, layer5);
-  objects.push(player, bat, bat2, ghost, wheel);
+  const enemies = [];
+  const backgrounds = [];
+  backgrounds.push(layer1, layer2, layer3, layer4, layer5);
+  enemies.push(bat, bat2, ghost, wheel);
+  objects.push(...backgrounds);
+  objects.push(player);
+  objects.push(...enemies);
+  console.log(objects);
 
   function animate() {
-    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-    objects.forEach((object) => {
-      object.update();
-      object.draw();
-    });
+    if (!gamePaused) {
+      ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+      objects.forEach((object) => {
+        object.update();
+        object.draw();
+      });
+      player.collisionId = 0;
+      enemies.forEach((enemy) => {
+        if (checkCollision(player.rect, enemy.rect)) player.collisionId = 1;
+      });
 
-    gameFrame++;
+      gameFrame++;
+    }
     requestAnimationFrame(animate);
   }
 
