@@ -1,7 +1,7 @@
 /** @type {HTMLCanvasElement} */
 
-import { Enemy, Bat, Bat2, Ghost, Wheel } from './enemy.js';
-import { Player } from './player.js';
+import { Bat, Bat2, Ghost, Wheel } from './enemy.js';
+import Player from './player.js';
 import Layer from './background.js';
 
 const canvas = document.getElementById('canvas1');
@@ -21,11 +21,12 @@ window.global = {
   TICK_SPEED: 5,
   CANVAS_WIDTH: CANVAS_WIDTH,
   CANVAS_HEIGHT: CANVAS_HEIGHT,
-  ctx: ctx
+  ctx: ctx,
+  FPS: 60
 };
 
 window.debug = {
-  DRAW_HITBOX: true
+  DRAW_HITBOX: false
 };
 
 const backgroundLayer1 = new Image();
@@ -42,20 +43,6 @@ backgroundLayer5.src = 'assets/backgrounds/layer-5.png';
 /////////////////////////////////////////////////////////////////
 // MAIN GAME FUNCTIONS
 /////////////////////////////////////////////////////////////////
-function checkCollision(rect1, rect2) {
-  if (
-    rect1.x > rect2.x + rect2.width ||
-    rect1.x + rect1.width < rect2.x ||
-    rect1.y > rect2.y + rect2.height ||
-    rect1.y + rect1.height < rect2.y
-  ) {
-    // no collision
-    return false;
-  } else {
-    // collision
-    return true;
-  }
-}
 
 function pauseGame() {
   if (!gamePaused) {
@@ -73,11 +60,13 @@ function pauseGame() {
 
 let gameFrame = 0;
 let gamePaused = false;
+let currentTime = 0;
+let prevTime = 0;
 
 // wait until all assets are fully loaded before starting the game
 window.addEventListener('load', () => {
   const player = new Player(150, 250);
-  player.playerState = 'run';
+  player.state = 'run';
   const bat = new Bat(200, 100);
   const bat2 = new Bat2(200, 100);
   const ghost = new Ghost(200, 100);
@@ -89,26 +78,27 @@ window.addEventListener('load', () => {
   const layer4 = new Layer(backgroundLayer4, 0.8);
   const layer5 = new Layer(backgroundLayer5, 1);
 
-  const objects = [];
   const enemies = [];
   const backgrounds = [];
   backgrounds.push(layer1, layer2, layer3, layer4, layer5);
   enemies.push(bat, bat2, ghost, wheel);
-  objects.push(...backgrounds);
-  objects.push(player);
-  objects.push(...enemies);
-  console.log(objects);
 
-  function animate() {
+  function animate(timestamp) {
     if (!gamePaused) {
+      let deltaTime = timestamp - prevTime;
+      prevTime = timestamp;
+
       ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-      objects.forEach((object) => {
-        object.update();
-        object.draw();
+
+      // iterate over all game objects and update/draw
+      [...backgrounds, player, ...enemies].forEach((object) => {
+        object.update(deltaTime);
+        object.draw(deltaTime);
       });
+
       player.collisionId = 0;
       enemies.forEach((enemy) => {
-        if (checkCollision(player.rect, enemy.rect)) player.collisionId = 1;
+        if (player.checkCollision(enemy.hitbox)) player.collisionId = 1;
       });
 
       gameFrame++;
@@ -120,5 +110,5 @@ window.addEventListener('load', () => {
   // GAME LOOP
   /////////////////////////////////////////////////////////////////
 
-  animate();
+  animate(0);
 });
