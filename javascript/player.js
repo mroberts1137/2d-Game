@@ -1,8 +1,8 @@
 import Entity from './entity.js';
 
 export default class Player extends Entity {
-  constructor(x, y) {
-    super(x, y);
+  constructor(game, x, y) {
+    super(game, x, y);
     // sprite info
     this.image.src = 'assets/sprites/shadow_dog.png';
     this.spriteWidth = 575;

@@ -1,6 +1,6 @@
 /** @type {HTMLCanvasElement} */
 
-import { Bat, Bat2, Ghost, Wheel } from './enemy.js';
+import { Bat, Bat2, Ghost, Wheel, Worm, Ghost2, Spider } from './enemy.js';
 import Player from './player.js';
 import Layer from './background.js';
 
@@ -22,7 +22,8 @@ window.global = {
   CANVAS_WIDTH: CANVAS_WIDTH,
   CANVAS_HEIGHT: CANVAS_HEIGHT,
   ctx: ctx,
-  FPS: 60
+  FPS: 60,
+  gamePaused: false
 };
 
 window.debug = {
@@ -41,15 +42,72 @@ const backgroundLayer5 = new Image();
 backgroundLayer5.src = 'assets/backgrounds/layer-5.png';
 
 /////////////////////////////////////////////////////////////////
-// MAIN GAME FUNCTIONS
+// GAME CLASS
+/////////////////////////////////////////////////////////////////
+
+class Game {
+  constructor(ctx, canvasWidth, canvasHeight) {
+    this.ctx = ctx;
+    this.canvasWidth = canvasWidth;
+    this.canvasHeight = canvasHeight;
+
+    this.enemies = [];
+    this.backgrounds = [];
+    this.player = new Player(this, 150, 320);
+    this.player.state = 'run';
+    this.#addNewEnemy();
+    this.#addBackground();
+
+    this.gameFrame = 0;
+  }
+  update(deltaTime) {
+    // delete enemies marked for deletion
+    this.enemies = this.enemies.filter((obj) => !obj.markedForDeletion);
+
+    [...this.backgrounds, this.player, ...this.enemies].forEach((object) =>
+      object.update(deltaTime)
+    );
+  }
+
+  draw(deltaTime) {
+    this.ctx.clearRect(0, 0, this.canvasWidth, this.canvasHeight);
+
+    [...this.backgrounds, this.player, ...this.enemies].forEach((object) =>
+      object.draw(deltaTime)
+    );
+  }
+
+  #addNewEnemy() {
+    this.enemies.push(new Bat(this, 200, 100));
+    this.enemies.push(new Bat2(this, 200, 100));
+    this.enemies.push(new Ghost(this, 200, 100));
+    this.enemies.push(new Wheel(this, 200, 100));
+    this.enemies.push(new Worm(this, 200, 500));
+    this.enemies.push(new Ghost2(this, 200, 400));
+    this.enemies.push(new Spider(this, 200, 0));
+    this.enemies.push(new Spider(this, 400, 0));
+    this.enemies.push(new Spider(this, 500, 0));
+  }
+
+  #addBackground() {
+    this.backgrounds.push(new Layer(backgroundLayer1, 0.2));
+    this.backgrounds.push(new Layer(backgroundLayer2, 0.4));
+    this.backgrounds.push(new Layer(backgroundLayer3, 0.6));
+    this.backgrounds.push(new Layer(backgroundLayer4, 0.8));
+    this.backgrounds.push(new Layer(backgroundLayer5, 1));
+  }
+}
+
+/////////////////////////////////////////////////////////////////
+// GLOBAL FUNCTIONS
 /////////////////////////////////////////////////////////////////
 
 function pauseGame() {
-  if (!gamePaused) {
-    gamePaused = true;
+  if (!window.global.gamePaused) {
+    window.global.gamePaused = true;
     pauseButton.innerText = 'Play';
   } else {
-    gamePaused = false;
+    window.global.gamePaused = false;
     pauseButton.innerText = 'Pause';
   }
 }
@@ -58,50 +116,27 @@ function pauseGame() {
 // GAME INITIALIZE
 /////////////////////////////////////////////////////////////////
 
-let gameFrame = 0;
-let gamePaused = false;
-let currentTime = 0;
-let prevTime = 0;
+const game = new Game(ctx, canvas.width, canvas.height);
 
 // wait until all assets are fully loaded before starting the game
 window.addEventListener('load', () => {
-  const player = new Player(150, 250);
-  player.state = 'run';
-  const bat = new Bat(200, 100);
-  const bat2 = new Bat2(200, 100);
-  const ghost = new Ghost(200, 100);
-  const wheel = new Wheel(200, 100);
-
-  const layer1 = new Layer(backgroundLayer1, 0.2);
-  const layer2 = new Layer(backgroundLayer2, 0.4);
-  const layer3 = new Layer(backgroundLayer3, 0.6);
-  const layer4 = new Layer(backgroundLayer4, 0.8);
-  const layer5 = new Layer(backgroundLayer5, 1);
-
-  const enemies = [];
-  const backgrounds = [];
-  backgrounds.push(layer1, layer2, layer3, layer4, layer5);
-  enemies.push(bat, bat2, ghost, wheel);
-
+  let prevTime = 0;
   function animate(timestamp) {
-    if (!gamePaused) {
+    if (!window.global.gamePaused) {
       let deltaTime = timestamp - prevTime;
       prevTime = timestamp;
 
-      ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-
       // iterate over all game objects and update/draw
-      [...backgrounds, player, ...enemies].forEach((object) => {
-        object.update(deltaTime);
-        object.draw(deltaTime);
+      game.update(deltaTime);
+      game.draw(deltaTime);
+
+      game.player.collisionId = 0;
+      game.enemies.forEach((enemy) => {
+        if (game.player.checkCollision(enemy.hitbox))
+          game.player.collisionId = 1;
       });
 
-      player.collisionId = 0;
-      enemies.forEach((enemy) => {
-        if (player.checkCollision(enemy.hitbox)) player.collisionId = 1;
-      });
-
-      gameFrame++;
+      game.gameFrame++;
     }
     requestAnimationFrame(animate);
   }

@@ -1,5 +1,8 @@
 export default class Entity {
-  constructor(x, y) {
+  constructor(game, x, y) {
+    this.game = game;
+    this.gameFrame = 0;
+
     // state properties
     this.state = 'idle';
     this.markedForDeletion = false;
@@ -53,22 +56,23 @@ export default class Entity {
   }
 
   update(deltaTime) {
-    this.move();
+    ++this.gameFrame;
+    this.move(deltaTime);
     // update hitbox
     this.hitbox.x = this.x + this.hitbox.xOffset;
     this.hitbox.y = this.y + this.hitbox.yOffset;
 
     // out-of-bounds
     const leftOOB = this.x < -this.width;
-    const rightOOB = this.x > window.global.CANVAS_WIDTH;
+    const rightOOB = this.x > this.game.canvasWidth;
     const topOOB = this.y < -this.height;
-    const bottomOOB = this.y > window.global.CANVAS_HEIGHT;
+    const bottomOOB = this.y > this.game.canvasHeight;
     switch (this.outOfBounds) {
       case 'wrap':
         if (rightOOB) this.x = -this.width;
-        if (leftOOB) this.x = window.global.CANVAS_WIDTH;
+        if (leftOOB) this.x = this.game.canvasWidth;
         if (bottomOOB) this.y = -this.height;
-        if (topOOB) this.y = window.global.CANVAS_HEIGHT;
+        if (topOOB) this.y = this.game.canvasHeight;
         break;
       case 'delete':
         if (leftOOB || rightOOB || topOOB || bottomOOB) {
@@ -86,7 +90,10 @@ export default class Entity {
     }
   }
 
-  move() {}
+  move(deltaTime) {
+    this.x += this.vx * deltaTime;
+    this.y += this.vy * deltaTime;
+  }
 
   getAnimation(deltaTime) {
     this.animationTick += deltaTime;
@@ -105,13 +112,13 @@ export default class Entity {
     const { frameX, frameY } = this.getAnimation(deltaTime);
 
     if (window.debug.DRAW_HITBOX)
-      window.global.ctx.strokeRect(
+      this.game.ctx.strokeRect(
         this.hitbox.x,
         this.hitbox.y,
         this.hitbox.width,
         this.hitbox.height
       );
-    window.global.ctx.drawImage(
+    this.game.ctx.drawImage(
       this.image,
       frameX,
       frameY,
